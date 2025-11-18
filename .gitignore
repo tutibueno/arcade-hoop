@@ -1,0 +1,91 @@
+# ========================================
+# Unity
+# ========================================
+
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+
+# Evita cache do Unity Collab
+.collab/
+
+# Arquivos de cache de pacotes e plugins
+PackageCache/
+UnityPackageManager/
+
+# ========================================
+# Visual Studio / IDEs
+# ========================================
+
+# VS / Rider / VSCode
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Cache do Rider
+.idea/
+*.DotSettings.user
+
+# VSCode
+.vscode/
+
+# ========================================
+# Sistema Operacional
+# ========================================
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+
+# ========================================
+# Outros
+# ========================================
+
+# TextMesh Pro
+TextMesh Pro.meta
+TextMesh Pro/
+
+# Arquivos gerados automaticamente
+*.unitypackage
+
+# Logs
+*.log
+
+# mp4
+*.mp4
+
+# ========================================
+# StreamingAssets (opcional)
+# ========================================
+# Se você quiser versionar seus vídeos, NÃO ignore essa pasta.
+# Se os arquivos de vídeo forem grandes e NÃO quiser subir:
+# Descomente a linha abaixo:
+
+# Assets/StreamingAssets/*.mp4
