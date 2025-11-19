@@ -276,7 +276,7 @@ public class GameManager : MonoBehaviour {
         faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
 
 
-        if(pontos > fases[faseAtual].pontosParaProximaFase){
+        if(pontos >= fases[faseAtual].pontosParaProximaFase){
 			faseAtual++;
             faseSlider.value = 0;
 		}
@@ -285,13 +285,13 @@ public class GameManager : MonoBehaviour {
 	}
 
 	float t = 0;
-	float blinkSpeed = 2;
+	float blinkSpeed = 4;
 	int currentAttractVideoIndex;
 	void UpdateAttract()
 	{
         t = Mathf.Sin(Time.time * blinkSpeed);
 	
-        attractCanvas.alpha = Mathf.Abs(t);
+        attractCanvas.alpha = Mathf.Lerp(1f, 0.2f, t);
 
 		if(creditos > 0)
             attractTxt.text = "APERTE START!!";	
