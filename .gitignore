@@ -11,38 +11,34 @@
 UserSettings/
 MemoryCaptures/
 
-# Evita cache do Unity Collab
+# Evitar arquivos do Unity Collab
 .collab/
 
-# Arquivos de cache de pacotes e plugins
+# Cache de pacotes
 PackageCache/
 UnityPackageManager/
 
 # ========================================
-# Visual Studio / IDEs
+# VSCode
 # ========================================
+.vscode/
+*.code-workspace
 
-# VS / Rider / VSCode
+# ========================================
+# Arquivos gerados automaticamente por Unity / C#
+# ========================================
 *.csproj
 *.sln
-*.suo
-*.tmp
 *.user
-*.userprefs
+*.unityproj
 *.pidb
 *.booproj
+*.tmp
 *.svd
 *.pdb
 *.mdb
 *.opendb
 *.VC.db
-
-# Cache do Rider
-.idea/
-*.DotSettings.user
-
-# VSCode
-.vscode/
 
 # ========================================
 # Sistema Operacional
@@ -56,36 +52,42 @@ $RECYCLE.BIN/
 
 # macOS
 .DS_Store
-.DS_Store?
-._*
+.AppleDouble
+.LSOverride
 .Spotlight-V100
 .Trashes
+._*
 
 # Linux
 *~
 
 # ========================================
-# Outros
+# StreamingAssets
 # ========================================
+# NÃO versionar vídeos .mp4 colocados pela máquina física
+Assets/StreamingAssets/*.mp4
+Assets/StreamingAssets/*.avi
+Assets/StreamingAssets/*.mov
+Assets/StreamingAssets/*.mpeg
+Assets/StreamingAssets/*.webm
 
-# TextMesh Pro
-TextMesh Pro.meta
-TextMesh Pro/
+# Caso você tenha outros arquivos que deseja versionar (ex: JSON, XML)
+# eles continuarão sendo versionados normalmente.
 
-# Arquivos gerados automaticamente
-*.unitypackage
-
-# Logs
+# ========================================
+# Outros arquivos
+# ========================================
 *.log
-
-# mp4
+*.bak
+*.old
+*.tmp
+*.zip
+*.rar
+*.7z
 *.mp4
 
-# ========================================
-# StreamingAssets (opcional)
-# ========================================
-# Se você quiser versionar seus vídeos, NÃO ignore essa pasta.
-# Se os arquivos de vídeo forem grandes e NÃO quiser subir:
-# Descomente a linha abaixo:
+# Evitar TextMeshPro gerado automaticamente
+TextMesh Pro/
 
-# Assets/StreamingAssets/*.mp4
+# Ignorar unitypackages exportados
+*.unitypackage

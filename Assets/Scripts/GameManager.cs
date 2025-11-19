@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,7 +8,8 @@ using System.IO;
 public class GameManager : MonoBehaviour {
 
 	public enum gameState {
-		apresentacao,
+		attract,
+		countdown,
 		ingame,
 		gameOver
 	}
@@ -22,27 +23,48 @@ public class GameManager : MonoBehaviour {
 	[SerializeField]
 	private Text creditosTxt;
 
+    [SerializeField]
+    private Text attractTxt;
+
 	[SerializeField]
 	private Text highScoreTxt;
 
 	[SerializeField]
 	private Text scoreText;
+    
+	[SerializeField]
+    private Text proximaFasePtsTxt;
+
+    [SerializeField]
+    private Text faseAtualTxt;
+
+    [SerializeField]
+	private Slider faseSlider;
 
 	[SerializeField]
 	public VideoPlayer videoPlayer;
 
 	[SerializeField]
 	private CanvasGroup videoCanvasGroup;
+    [SerializeField]
+	CanvasGroup inGameCanvas;
+    [SerializeField]
+	CanvasGroup gameOverCanvas;
+    [SerializeField]
+    CanvasGroup attractCanvas;
 
 	[SerializeField]
 	private string[] videoFiles;
+
+    [SerializeField]
+    private string[] videoFilesAttract;
 
 	private float tempoRestante;
 
 	[SerializeField]
 	public Text timerText;
 
-	public float tempoLimite = 90f; //Vai ser por fase
+	private float tempoLimite = 0; //Vai ser por fase
 
 	public int pontos;
 
@@ -50,7 +72,10 @@ public class GameManager : MonoBehaviour {
 
 	public int faseAtual;
 
-	public gameState state;
+	public gameState stateAtual;
+
+	int pointsPerShooting = 2;
+	int pointsPerShootingBonus = 3;
 
 	Color tempoOriginalColor;
 
@@ -59,35 +84,43 @@ public class GameManager : MonoBehaviour {
 
         tempoOriginalColor = timerText.color;
 
-		ResetGame();
+		stateAtual = gameState.attract;
 
 		// Caminho completo da pasta StreamingAssets
-		string path = Application.streamingAssetsPath;
+		string path = Application.streamingAssetsPath + "/Pontuacao";
 
 		// Pega todos os arquivos .mp4 (ou troque para .mov / .avi)
 		videoFiles = Directory.GetFiles(path, "*.mp4");
 
-		if (videoFiles.Length == 0)
-		{
-			Debug.LogError("Nenhum vídeo encontrado em StreamingAssets!");
-		}
+		Debug.Log("Videos de Pontuação encontrados: " + videoFiles.Length);
+		
+		path = Application.streamingAssetsPath + "/Attract";
+		videoFilesAttract = Directory.GetFiles(path, "*.mp4");
 
-		if (videoFiles.Length == 0)
-		{
-			Debug.LogError("Nenhum vídeo encontrado em StreamingAssets!");
-		}
+        Debug.Log("Videos de Attract encontrados: " + videoFilesAttract.Length);
+
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		
-		// Contagem regressiva
-		if (tempoRestante > 0)
-		{
-			tempoRestante -= Time.deltaTime;
-			if (tempoRestante < 0) tempoRestante = 0;
-			UpdateUI();
+		switch (stateAtual){
+			case gameState.attract:
+                UpdateAttract();
+				break;
+			case gameState.countdown:
+                UpdateCountDown();
+				break;
+			case gameState.ingame:
+				UpdateInGame();
+				break;
+			case gameState.gameOver:
+				UpdateGameOver();
+				break;
+
 		}
+
+        UpdateUI();
 
 		GetInputs();
 
@@ -118,7 +151,10 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void GameOver(){
-		RemoveCreditos();
+		videoPlayer.Stop();
+		stateAtual = gameState.attract;
+		inGameCanvas.alpha = 0;
+		gameOverCanvas.alpha = 1;
 	}
 
 	public void AddCreditos(){
@@ -151,9 +187,16 @@ public class GameManager : MonoBehaviour {
 
 	void AddPontos()
 	{
-		pontos += 2;
+		if(stateAtual != gameState.ingame)
+			return;
+		
+		pontos += tempoRestante > 15 ? pointsPerShooting : pointsPerShootingBonus;
+		
 		if (pontos > highScore)
 			highScore = pontos;
+
+		
+
 		PlayRandomVideo ();
 	}
 
@@ -166,6 +209,10 @@ public class GameManager : MonoBehaviour {
 		timerText.text = string.Format("{0}:{1:00}", minutes, seconds);
 		highScoreTxt.text = highScore.ToString ();
 		creditosTxt.text = creditos.ToString ();
+
+		faseAtualTxt.text = (faseAtual + 1).ToString();
+
+		proximaFasePtsTxt.text = (fases[faseAtual].pontosParaProximaFase - pontos).ToString();
 
         if (tempoRestante <= 5f)
         {
@@ -189,16 +236,88 @@ public class GameManager : MonoBehaviour {
 	void ResetGame()
 	{
 		pontos = 0;
-		tempoRestante = tempoLimite;
+		faseAtual = 0;
+		tempoRestante = 0;
+		videoPlayer.Stop();
+		tempoRestante += fases[0].tempoAdicional;
 	}
 
 	void StartGame()
 	{
 		//verifica se não existe um jogo em andamento
-		if(state != gameState.ingame && creditos > 0){
+		if(stateAtual != gameState.ingame && creditos > 0){
 			RemoveCreditos();
 			ResetGame();
-			state = gameState.ingame;
+			stateAtual = gameState.ingame;
+			attractCanvas.alpha = 0;
+			gameOverCanvas.alpha = 0;
+			faseAtual = 0;
 		}
+	}
+
+	void UpdateInGame()
+	{
+
+		inGameCanvas.alpha = Mathf.Lerp(inGameCanvas.alpha,1,Time.deltaTime*1.4f);
+
+        // Contagem regressiva
+        if (tempoRestante > 0)
+        {
+            tempoRestante -= Time.deltaTime;
+            if (tempoRestante < 0) {
+				tempoRestante = 0;
+				stateAtual = gameState.gameOver;
+			}
+
+        }
+
+		float p = (float)pontos / (float)fases[faseAtual].pontosParaProximaFase;
+
+        faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
+
+
+        if(pontos > fases[faseAtual].pontosParaProximaFase){
+			faseAtual++;
+            faseSlider.value = 0;
+		}
+
+		
+	}
+
+	float t = 0;
+	float blinkSpeed = 2;
+	int currentAttractVideoIndex;
+	void UpdateAttract()
+	{
+        t = Mathf.Sin(Time.time * blinkSpeed);
+	
+        attractCanvas.alpha = Mathf.Abs(t);
+
+		if(creditos > 0)
+            attractTxt.text = "APERTE START!!";	
+		else
+			attractTxt.text = "INSIRA CRÉDITOS PARA COMEÇAR!";
+
+		
+		if(!videoPlayer.isPlaying){
+			if(currentAttractVideoIndex > videoFilesAttract.Length - 1)
+                currentAttractVideoIndex = 0;
+
+            videoPlayer.url = videoFilesAttract[currentAttractVideoIndex];
+            videoPlayer.isLooping = false;
+			videoPlayer.Play();
+
+			currentAttractVideoIndex++;
+		}
+	}
+
+	void UpdateCountDown()
+	{
+
+	}
+
+	void UpdateGameOver()
+	{
+
 	}
 }
