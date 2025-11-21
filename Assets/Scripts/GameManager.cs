@@ -11,7 +11,9 @@ public class GameManager : MonoBehaviour {
 		attract,
 		countdown,
 		ingame,
-		gameOver
+		transicaoFase,
+		gameOver,
+		final
 	}
 
 	[SerializeField]
@@ -45,6 +47,18 @@ public class GameManager : MonoBehaviour {
 	public VideoPlayer videoPlayer;
 
 	[SerializeField]
+	private List<VideoPlayer> videoPlayersAttract;
+    
+	[SerializeField]
+	private List<VideoPlayer> videoPlayersPontuacao;
+	
+	[SerializeField]
+    private List<VideoPlayer> videoPlayersFase;
+
+    [SerializeField]
+    private List<VideoPlayer> videoPlayersFinalJogo;
+
+	[SerializeField]
 	private CanvasGroup videoCanvasGroup;
     [SerializeField]
 	CanvasGroup inGameCanvas;
@@ -52,6 +66,9 @@ public class GameManager : MonoBehaviour {
 	CanvasGroup gameOverCanvas;
     [SerializeField]
     CanvasGroup attractCanvas;
+
+	[SerializeField]
+	CanvasGroup transicaoFaseCanvas;
 
 	[SerializeField]
 	private string[] videoFiles;
@@ -72,6 +89,8 @@ public class GameManager : MonoBehaviour {
 
 	public int faseAtual;
 
+	private TransicaoFase transicaoFase;
+
 	public gameState stateAtual;
 
 	int pointsPerShooting = 2;
@@ -84,7 +103,9 @@ public class GameManager : MonoBehaviour {
 
         tempoOriginalColor = timerText.color;
 
-		stateAtual = gameState.attract;
+		ChangeState(gameState.attract);
+
+		transicaoFase = GetComponentInChildren<TransicaoFase>();
 
 		// Caminho completo da pasta StreamingAssets
 		string path = Application.streamingAssetsPath + "/Pontuacao";
@@ -93,13 +114,37 @@ public class GameManager : MonoBehaviour {
 		videoFiles = Directory.GetFiles(path, "*.mp4");
 
 		Debug.Log("Videos de Pontuação encontrados: " + videoFiles.Length);
+
+		foreach (var item in videoFiles)
+		{
+			var go = Instantiate(videoPlayer, Vector3.zero, Quaternion.identity, transform);
+			go.url = item;
+			go.source = VideoSource.Url;
+			go.isLooping = false;
+			videoPlayersPontuacao.Add(go);
+
+		}
 		
 		path = Application.streamingAssetsPath + "/Attract";
 		videoFilesAttract = Directory.GetFiles(path, "*.mp4");
 
+        foreach (var item in videoFiles)
+        {
+            var vid = Instantiate(videoPlayer, Vector3.zero, Quaternion.identity);
+            vid.url = item;
+			vid.isLooping = false;
+            videoPlayersAttract.Add(vid);
+			vid.loopPointReached += OnLoopReached;
+        }
+
         Debug.Log("Videos de Attract encontrados: " + videoFilesAttract.Length);
 
-	}
+		gameOverCanvas.alpha = 0;
+
+		//Subscreve ao evento
+		transicaoFase.OnTransicaoFaseFinished += OnTransicaoFaseFinished;
+
+	}    
 	
 	// Update is called once per frame
 	void Update () {
@@ -148,11 +193,15 @@ public class GameManager : MonoBehaviour {
 		if (Input.GetKeyDown (KeyCode.Alpha1)) {
 			StartGame();
 		}
+
+		if(Input.GetKeyDown(KeyCode.Escape)){
+			Application.Quit();
+		}
 	}
 
 	public void GameOver(){
 		videoPlayer.Stop();
-		stateAtual = gameState.attract;
+		ChangeState(gameState.attract);
 		inGameCanvas.alpha = 0;
 		gameOverCanvas.alpha = 1;
 	}
@@ -239,16 +288,16 @@ public class GameManager : MonoBehaviour {
 		faseAtual = 0;
 		tempoRestante = 0;
 		videoPlayer.Stop();
-		tempoRestante += fases[0].tempoAdicional;
+		tempoRestante = fases[0].tempo;
 	}
 
 	void StartGame()
 	{
 		//verifica se não existe um jogo em andamento
-		if(stateAtual != gameState.ingame && creditos > 0){
+		if(stateAtual == gameState.attract && creditos > 0){
 			RemoveCreditos();
 			ResetGame();
-			stateAtual = gameState.ingame;
+			ChangeState(gameState.ingame);
 			attractCanvas.alpha = 0;
 			gameOverCanvas.alpha = 0;
 			faseAtual = 0;
@@ -266,19 +315,38 @@ public class GameManager : MonoBehaviour {
             tempoRestante -= Time.deltaTime;
             if (tempoRestante < 0) {
 				tempoRestante = 0;
-				stateAtual = gameState.gameOver;
 			}
-
         }
 
 		float p = (float)pontos / (float)fases[faseAtual].pontosParaProximaFase;
 
         faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
 
+		//Verifica se passou de fase
+		if(tempoRestante <= 0){
+			if(pontos >= fases[faseAtual].pontosParaProximaFase){
+				faseAtual++;
 
-        if(pontos >= fases[faseAtual].pontosParaProximaFase){
-			faseAtual++;
-            faseSlider.value = 0;
+				//verifica se é a última fase
+				if(faseAtual >= fases.Length){
+                    faseAtual = fases.Length-1;
+					ChangeState(gameState.final);
+					StartCoroutine(Final());
+					return;
+				}
+
+				faseSlider.value = 0;
+				tempoRestante = fases[faseAtual].tempo;
+				videoPlayer.Stop();
+                ChangeState(gameState.transicaoFase);
+                LeanTween.alphaCanvas(inGameCanvas, 0, 0.5f).setOnComplete(()=> {transicaoFase.IniciaTransicaoFase(faseAtual); });
+				return;
+			}
+			//Não conseguiu avançar de fase: Game Over
+			else{
+                ChangeState(gameState.gameOver);
+                return;
+			}
 		}
 
 		
@@ -286,7 +354,7 @@ public class GameManager : MonoBehaviour {
 
 	float t = 0;
 	float blinkSpeed = 4;
-	int currentAttractVideoIndex;
+	int currentAttractVideoIndex = 0;
 	void UpdateAttract()
 	{
         t = Mathf.Sin(Time.time * blinkSpeed);
@@ -300,24 +368,69 @@ public class GameManager : MonoBehaviour {
 
 		
 		if(!videoPlayer.isPlaying){
-			if(currentAttractVideoIndex > videoFilesAttract.Length - 1)
-                currentAttractVideoIndex = 0;
 
-            videoPlayer.url = videoFilesAttract[currentAttractVideoIndex];
-            videoPlayer.isLooping = false;
-			videoPlayer.Play();
+			if(currentAttractVideoIndex >= videoPlayersAttract.Count)
+				currentAttractVideoIndex = 0;
 
-			currentAttractVideoIndex++;
-		}
+			//Desabilita todos os outros videos
+			foreach (var item in videoPlayersAttract)
+			{
+				item.gameObject.SetActive(false);
+			}
+
+
+            videoPlayersAttract[currentAttractVideoIndex].gameObject.SetActive(true);
+
+            videoPlayer = videoPlayersAttract[currentAttractVideoIndex];
+
+            Debug.Log("Tocando o video do indice: " + currentAttractVideoIndex);
+
+            currentAttractVideoIndex++;
+
+            Debug.Log("Proximo Video: " + currentAttractVideoIndex);
+
+
+        }
+		
 	}
 
 	void UpdateCountDown()
 	{
+		
 
 	}
 
 	void UpdateGameOver()
 	{
+        inGameCanvas.alpha = Mathf.Lerp(inGameCanvas.alpha, 0, Time.deltaTime * 5);
+        gameOverCanvas.alpha = Mathf.Lerp(gameOverCanvas.alpha, 1, Time.deltaTime * 4);
+	}
 
+    void OnLoopReached(UnityEngine.Video.VideoPlayer vp)
+    {
+        //vp.playbackSpeed = vp.playbackSpeed / 10.0F;
+		Debug.Log("Chegou ao fim do video");
+    }
+
+	private IEnumerator TransicaoFase()
+	{
+
+		yield return null;
+
+	}
+
+	private IEnumerator Final(){
+		
+		
+		yield return null;
+	}
+
+	void ChangeState(gameState newState)
+	{
+		stateAtual = newState;
+	}
+
+    void OnTransicaoFaseFinished(){
+		ChangeState(gameState.ingame);
 	}
 }
