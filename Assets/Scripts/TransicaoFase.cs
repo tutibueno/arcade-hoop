@@ -9,7 +9,11 @@ public class TransicaoFase : MonoBehaviour {
 
 	private CanvasGroup canvasGroupPrincipal;
 
-	public CanvasGroup[] canvasTransicaoMensagens;
+    [SerializeField]
+	private CanvasGroup[] canvasTransicaoMensagens;
+
+    [SerializeField]
+    private Text[] linhasMensagens;
 
 	private bool isInTransition;
 
@@ -63,18 +67,21 @@ public class TransicaoFase : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
+        
 	}
 
-	public void IniciaTransicaoFase(int fase){
+	public void IniciaTransicaoFase(bool faseFinal){
         isInTransition = true;
-		StartCoroutine("StartTransicaoCoroutine", fase);
+		StartCoroutine("StartTransicaoCo", faseFinal);
 	}
 
-	private IEnumerator StartTransicaoCoroutine(int fase){
-		
+	private IEnumerator StartTransicaoCo(bool faseFinal){
+
 		//Toca o video da fase
-		videoPlayer.url = videoFilesFase[fase];
+		if(!faseFinal)
+			videoPlayer.url = videoFilesFase[GameManager.instance.faseAtual];
+		else
+            videoPlayer.url = GameManager.instance.GetVideoFimJogo();
 
 		videoPlayer.Prepare();
 
@@ -90,8 +97,18 @@ public class TransicaoFase : MonoBehaviour {
         // Aguarda terminar
         yield return new WaitUntil(() => !videoPlayer.isPlaying);
 
+        //Habilita as mensagens
+		if(faseFinal) {
+            linhasMensagens[0].text = "Parabéns!";
+            linhasMensagens[1].text = "Chegou ao Fim do Jogo!";
+            linhasMensagens[2].text = "Até a Próxima Partida!";
+		}
+		else {
+            linhasMensagens[0].text = "Parabéns!";
+            linhasMensagens[1].text = "Prepare-se";
+            linhasMensagens[2].text = "Para a Próxima Fase!";
+		}
 
-		//Habilita as mensagens
 		foreach (var item in canvasTransicaoMensagens)
 		{
             LeanTween.alphaCanvas(item, 1, 1);
@@ -106,22 +123,28 @@ public class TransicaoFase : MonoBehaviour {
             item.alpha = 0;
         }
 
-		//CountDown
-		for (int i = 3; i > 0; i--)
-		{
-			countDownTxt.text = i.ToString();
+		if(!faseFinal){
 
-			countDownRect.localScale = Vector3.zero;
+            //CountDown
+            for (int i = 3; i >= 0; i--)
+            {
+                countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
 
-            countDownCanvas.alpha = 1;
+                countDownRect.localScale = Vector3.zero;
 
-            LeanTween.scale(countDownRect, Vector3.one*4f, 1f);
+                countDownCanvas.alpha = 1;
 
-			LeanTween.alphaCanvas(countDownCanvas, 0, 1f);
+                LeanTween.scale(countDownRect, Vector3.one * 4f, 1f);
 
-			yield return new WaitForSeconds(1);
+                LeanTween.alphaCanvas(countDownCanvas, 0, 1f);
+
+                yield return new WaitForSeconds(1);
+
+            }
 
 		}
+
+		
 
         countDownRect.localScale = Vector3.zero;
 		

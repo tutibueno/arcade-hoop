@@ -41,6 +41,13 @@ public class GameManager : MonoBehaviour {
     private Text faseAtualTxt;
 
     [SerializeField]
+    private RectTransform countDownRect;
+
+    private Text countDownTxt;
+
+    private CanvasGroup countDownCanvas;
+
+    [SerializeField]
 	private Slider faseSlider;
 
 	[SerializeField]
@@ -62,19 +69,29 @@ public class GameManager : MonoBehaviour {
 	private CanvasGroup videoCanvasGroup;
     [SerializeField]
 	CanvasGroup inGameCanvas;
+
+    //GameOver
     [SerializeField]
 	CanvasGroup gameOverCanvas;
+    
+	[SerializeField]
+    CanvasGroup gameOverHiscoreCanvas;
+
+    [SerializeField]
+	Text hiscoreGameOverTxt;
+	//----
+
     [SerializeField]
     CanvasGroup attractCanvas;
-
-	[SerializeField]
-	CanvasGroup transicaoFaseCanvas;
 
 	[SerializeField]
 	private string[] videoFiles;
 
     [SerializeField]
     private string[] videoFilesAttract;
+
+    [SerializeField]
+    private string[] videoFilesFinal;
 
 	private float tempoRestante;
 
@@ -96,7 +113,25 @@ public class GameManager : MonoBehaviour {
 	int pointsPerShooting = 2;
 	int pointsPerShootingBonus = 3;
 
+	bool isHighscore;
+
 	Color tempoOriginalColor;
+
+	//Singleton
+	static GameManager _instance;
+
+	private Coroutine attractCoroutine;
+
+	public static GameManager instance {get{
+		return _instance;
+	}}
+
+	void Awake() {
+        if (_instance == null)
+        {
+            _instance = this;
+        }
+	}
 
 	// Use this for initialization
 	void Start () {
@@ -106,6 +141,10 @@ public class GameManager : MonoBehaviour {
 		ChangeState(gameState.attract);
 
 		transicaoFase = GetComponentInChildren<TransicaoFase>();
+
+        countDownTxt = countDownRect.GetComponent<Text>();
+
+        countDownCanvas = countDownRect.GetComponent<CanvasGroup>();
 
 		// Caminho completo da pasta StreamingAssets
 		string path = Application.streamingAssetsPath + "/Pontuacao";
@@ -136,6 +175,10 @@ public class GameManager : MonoBehaviour {
             videoPlayersAttract.Add(vid);
 			vid.loopPointReached += OnLoopReached;
         }
+
+        path = Application.streamingAssetsPath + "/Final";
+
+		videoFilesFinal = Directory.GetFiles(path, "*.mp4");
 
         Debug.Log("Videos de Attract encontrados: " + videoFilesAttract.Length);
 
@@ -169,10 +212,7 @@ public class GameManager : MonoBehaviour {
 
 		GetInputs();
 
-		if (videoPlayer.isPlaying)
-			videoCanvasGroup.alpha = 1; 
-		else
-			videoCanvasGroup.alpha = 0;
+        videoCanvasGroup.alpha = videoPlayer.isPlaying ? 1 : 0;
 
 	}
 
@@ -241,8 +281,10 @@ public class GameManager : MonoBehaviour {
 		
 		pontos += tempoRestante > 15 ? pointsPerShooting : pointsPerShootingBonus;
 		
-		if (pontos > highScore)
+		if (pontos > highScore) {
 			highScore = pontos;
+			isHighscore = true;
+		}
 
 		
 
@@ -261,7 +303,7 @@ public class GameManager : MonoBehaviour {
 
 		faseAtualTxt.text = (faseAtual + 1).ToString();
 
-		proximaFasePtsTxt.text = (fases[faseAtual].pontosParaProximaFase - pontos).ToString();
+		proximaFasePtsTxt.text = (Mathf.Clamp(fases[faseAtual].pontosParaProximaFase - pontos, 0, Mathf.Infinity)).ToString();
 
         if (tempoRestante <= 5f)
         {
@@ -287,6 +329,7 @@ public class GameManager : MonoBehaviour {
 		pontos = 0;
 		faseAtual = 0;
 		tempoRestante = 0;
+        isHighscore = false;
 		videoPlayer.Stop();
 		tempoRestante = fases[0].tempo;
 	}
@@ -297,10 +340,11 @@ public class GameManager : MonoBehaviour {
 		if(stateAtual == gameState.attract && creditos > 0){
 			RemoveCreditos();
 			ResetGame();
-			ChangeState(gameState.ingame);
+			ChangeState(gameState.countdown);
 			attractCanvas.alpha = 0;
 			gameOverCanvas.alpha = 0;
 			faseAtual = 0;
+			StartCoroutine(StartGameCo());
 		}
 	}
 
@@ -327,24 +371,27 @@ public class GameManager : MonoBehaviour {
 			if(pontos >= fases[faseAtual].pontosParaProximaFase){
 				faseAtual++;
 
+				bool faseFinal = faseAtual >= fases.Length;
+
 				//verifica se é a última fase
-				if(faseAtual >= fases.Length){
+				if(faseFinal){
                     faseAtual = fases.Length-1;
 					ChangeState(gameState.final);
-					StartCoroutine(Final());
-					return;
 				}
+				else
+                    ChangeState(gameState.transicaoFase);
 
 				faseSlider.value = 0;
 				tempoRestante = fases[faseAtual].tempo;
 				videoPlayer.Stop();
-                ChangeState(gameState.transicaoFase);
-                LeanTween.alphaCanvas(inGameCanvas, 0, 0.5f).setOnComplete(()=> {transicaoFase.IniciaTransicaoFase(faseAtual); });
+                
+                LeanTween.alphaCanvas(inGameCanvas, 0, 0.5f).setOnComplete(()=> {transicaoFase.IniciaTransicaoFase(faseFinal); });
 				return;
 			}
 			//Não conseguiu avançar de fase: Game Over
 			else{
                 ChangeState(gameState.gameOver);
+				StartCoroutine(GameOverCo());
                 return;
 			}
 		}
@@ -362,7 +409,7 @@ public class GameManager : MonoBehaviour {
         attractCanvas.alpha = Mathf.Lerp(1f, 0.2f, t);
 
 		if(creditos > 0)
-            attractTxt.text = "APERTE START!!";	
+            attractTxt.text = "APERTE START!!";
 		else
 			attractTxt.text = "INSIRA CRÉDITOS PARA COMEÇAR!";
 
@@ -378,7 +425,6 @@ public class GameManager : MonoBehaviour {
 				item.gameObject.SetActive(false);
 			}
 
-
             videoPlayersAttract[currentAttractVideoIndex].gameObject.SetActive(true);
 
             videoPlayer = videoPlayersAttract[currentAttractVideoIndex];
@@ -388,7 +434,6 @@ public class GameManager : MonoBehaviour {
             currentAttractVideoIndex++;
 
             Debug.Log("Proximo Video: " + currentAttractVideoIndex);
-
 
         }
 		
@@ -402,8 +447,7 @@ public class GameManager : MonoBehaviour {
 
 	void UpdateGameOver()
 	{
-        inGameCanvas.alpha = Mathf.Lerp(inGameCanvas.alpha, 0, Time.deltaTime * 5);
-        gameOverCanvas.alpha = Mathf.Lerp(gameOverCanvas.alpha, 1, Time.deltaTime * 4);
+        
 	}
 
     void OnLoopReached(UnityEngine.Video.VideoPlayer vp)
@@ -419,10 +463,76 @@ public class GameManager : MonoBehaviour {
 
 	}
 
-	private IEnumerator Final(){
+    private IEnumerator StartGameCo()
+    {
+
+        //TODO implementar a rotina de aguardar o motor da rampa
+
+
+
+        //CountDown
+        for (int i = 3; i >= 0; i--)
+        {
+
+            countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
+
+            countDownRect.localScale = Vector3.zero;
+
+            countDownCanvas.alpha = 1;
+
+            LeanTween.scale(countDownRect, Vector3.one * 4f, 1f);
+
+            LeanTween.alphaCanvas(countDownCanvas, 0, 1f);
+
+            yield return new WaitForSeconds(1);
+
+        }
+
+        countDownRect.localScale = Vector3.zero;
+
+        ChangeState(gameState.ingame);
+
+        yield return null;
+
+    }
+
+	private IEnumerator FinalCo(){
 		
 		
 		yield return null;
+	}
+
+	private IEnumerator GameOverCo(){
+
+		videoPlayer.Stop();
+
+		hiscoreGameOverTxt.text = pontos.ToString();
+
+		gameOverCanvas.alpha = 0;
+
+        gameOverHiscoreCanvas.alpha = 0;
+
+        LeanTween.alphaCanvas(inGameCanvas,0,1).setOnComplete(() => LeanTween.alphaCanvas(gameOverCanvas, 1, 1));
+        
+		yield return new WaitUntil(()=> !LeanTween.isTweening());
+
+        yield return new WaitForSeconds(2);
+
+		if(isHighscore){
+			LeanTween.alphaCanvas(gameOverHiscoreCanvas,1,0.2f).setLoopPingPong();
+		}
+
+		yield return new WaitForSeconds(10);
+
+        LeanTween.alphaCanvas(gameOverCanvas, 0, 1);
+
+        yield return new WaitForSeconds(2);
+
+		LeanTween.cancel(gameOverHiscoreCanvas.gameObject);
+
+		stateAtual = gameState.attract;
+
+        yield return null;
 	}
 
 	void ChangeState(gameState newState)
@@ -431,6 +541,19 @@ public class GameManager : MonoBehaviour {
 	}
 
     void OnTransicaoFaseFinished(){
-		ChangeState(gameState.ingame);
+
+		if(stateAtual == gameState.final){
+            ChangeState(gameState.gameOver);
+			StartCoroutine(GameOverCo());
+			//
+			return;
+		}
+
+        ChangeState(gameState.ingame);
+	}
+
+	public string GetVideoFimJogo(){
+		int rdn = Random.Range(0, videoFilesFinal.Length);
+		return videoFilesFinal[rdn];
 	}
 }
