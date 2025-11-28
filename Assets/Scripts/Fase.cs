@@ -1,5 +1,6 @@
 [System.Serializable]
 public class Fase{
-    public int pontosParaProximaFase;
     public int tempo;
+    public int pontosParaProximaFase;
+    
 }

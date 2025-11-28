@@ -125,8 +125,10 @@ public class TransicaoFase : MonoBehaviour {
 
 		if(!faseFinal){
 
+
+			int countDown = GameManager.instance.GameSettings.countdownEntreFases;
             //CountDown
-            for (int i = 3; i >= 0; i--)
+            for (int i = countDown; i >= 0; i--)
             {
                 countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
 

@@ -17,7 +17,9 @@ public class GameManager : MonoBehaviour {
 	}
 
 	[SerializeField]
-	public Fase[] fases;
+	GameSettings gameSettings;
+
+	public GameSettings GameSettings{get{return gameSettings;}}
 
 	[SerializeField]
 	protected int creditos;
@@ -69,6 +71,9 @@ public class GameManager : MonoBehaviour {
 	private CanvasGroup videoCanvasGroup;
     [SerializeField]
 	CanvasGroup inGameCanvas;
+
+	[SerializeField]
+	CanvasGroup bonusPointsCanvas;
 
     //GameOver
     [SerializeField]
@@ -131,6 +136,25 @@ public class GameManager : MonoBehaviour {
         {
             _instance = this;
         }
+
+
+		//carrega a configuração do jogo
+		string path = Application.streamingAssetsPath + "/game.cfg";
+        
+
+		if(File.Exists(path)){
+            string json = File.ReadAllText(path);
+			GameSettings _gameSettings = JsonUtility.FromJson<GameSettings>(json);
+			gameSettings = _gameSettings;
+		}
+		else{
+			GameSettings _gameSettings = new GameSettings();
+			_gameSettings = gameSettings;
+			string json = JsonUtility.ToJson(_gameSettings);
+            File.WriteAllText(path, json);
+			
+		}
+
 	}
 
 	// Use this for initialization
@@ -293,19 +317,25 @@ public class GameManager : MonoBehaviour {
 
 	void UpdateUI()
 	{
+
+        highScoreTxt.text = highScore.ToString();
+        creditosTxt.text = creditos.ToString();
+
+		if(stateAtual != gameState.ingame)
+			return;
+
 		int minutes = Mathf.FloorToInt(tempoRestante / 60f);
 		int seconds = Mathf.FloorToInt(tempoRestante % 60f);
 
 		scoreText.text = pontos.ToString();
 		timerText.text = string.Format("{0}:{1:00}", minutes, seconds);
-		highScoreTxt.text = highScore.ToString ();
-		creditosTxt.text = creditos.ToString ();
+		
 
 		faseAtualTxt.text = (faseAtual + 1).ToString();
 
-		proximaFasePtsTxt.text = (Mathf.Clamp(fases[faseAtual].pontosParaProximaFase - pontos, 0, Mathf.Infinity)).ToString();
+		proximaFasePtsTxt.text = (Mathf.Clamp(gameSettings.fases[faseAtual].pontosParaProximaFase - pontos, 0, Mathf.Infinity)).ToString();
 
-        if (tempoRestante <= 5f)
+        if (tempoRestante <= 6f)
         {
             float scale = 1f + Mathf.PingPong(Time.time * 4f, 0.2f);
             timerText.transform.localScale = new Vector3(scale, scale, 1f);
@@ -314,6 +344,13 @@ public class GameManager : MonoBehaviour {
         {
             timerText.transform.localScale = Vector3.one;
         }
+
+		//Cesta de 3 pontos
+		if(tempoRestante <= 15){
+            bonusPointsCanvas.alpha = Mathf.PingPong(Time.time * 4f,1);
+		}
+		else
+            bonusPointsCanvas.alpha = 0;
 
 
         // Mudar cor quando faltam 5 segundos
@@ -331,7 +368,8 @@ public class GameManager : MonoBehaviour {
 		tempoRestante = 0;
         isHighscore = false;
 		videoPlayer.Stop();
-		tempoRestante = fases[0].tempo;
+		faseSlider.value = 0;
+		tempoRestante = gameSettings.fases[0].tempo;
 	}
 
 	void StartGame()
@@ -362,27 +400,27 @@ public class GameManager : MonoBehaviour {
 			}
         }
 
-		float p = (float)pontos / (float)fases[faseAtual].pontosParaProximaFase;
+		float p = (float)pontos / (float)gameSettings.fases[faseAtual].pontosParaProximaFase;
 
         faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
 
 		//Verifica se passou de fase
 		if(tempoRestante <= 0){
-			if(pontos >= fases[faseAtual].pontosParaProximaFase){
+			if(pontos >= gameSettings.fases[faseAtual].pontosParaProximaFase){
 				faseAtual++;
 
-				bool faseFinal = faseAtual >= fases.Length;
+				bool faseFinal = faseAtual >= gameSettings.fases.Length;
 
 				//verifica se é a última fase
 				if(faseFinal){
-                    faseAtual = fases.Length-1;
+                    faseAtual = gameSettings.fases.Length-1;
 					ChangeState(gameState.final);
 				}
 				else
                     ChangeState(gameState.transicaoFase);
 
 				faseSlider.value = 0;
-				tempoRestante = fases[faseAtual].tempo;
+				tempoRestante = gameSettings.fases[faseAtual].tempo;
 				videoPlayer.Stop();
                 
                 LeanTween.alphaCanvas(inGameCanvas, 0, 0.5f).setOnComplete(()=> {transicaoFase.IniciaTransicaoFase(faseFinal); });
@@ -471,7 +509,7 @@ public class GameManager : MonoBehaviour {
 
 
         //CountDown
-        for (int i = 3; i >= 0; i--)
+        for (int i = gameSettings.countdownParaComecar; i >= 0; i--)
         {
 
             countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
