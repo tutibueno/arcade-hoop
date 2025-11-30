@@ -137,23 +137,7 @@ public class GameManager : MonoBehaviour {
             _instance = this;
         }
 
-
-		//carrega a configuração do jogo
-		string path = Application.streamingAssetsPath + "/game.cfg";
-        
-
-		if(File.Exists(path)){
-            string json = File.ReadAllText(path);
-			GameSettings _gameSettings = JsonUtility.FromJson<GameSettings>(json);
-			gameSettings = _gameSettings;
-		}
-		else{
-			GameSettings _gameSettings = new GameSettings();
-			_gameSettings = gameSettings;
-			string json = JsonUtility.ToJson(_gameSettings);
-            File.WriteAllText(path, json);
-			
-		}
+		gameSettings = GameConfigLoader.Load ();
 
 	}
 
@@ -333,7 +317,7 @@ public class GameManager : MonoBehaviour {
 
 		faseAtualTxt.text = (faseAtual + 1).ToString();
 
-		proximaFasePtsTxt.text = (Mathf.Clamp(gameSettings.fases[faseAtual].pontosParaProximaFase - pontos, 0, Mathf.Infinity)).ToString();
+		proximaFasePtsTxt.text = (Mathf.Clamp(gameSettings.fases[faseAtual].pontos - pontos, 0, Mathf.Infinity)).ToString();
 
         if (tempoRestante <= 6f)
         {
@@ -400,13 +384,13 @@ public class GameManager : MonoBehaviour {
 			}
         }
 
-		float p = (float)pontos / (float)gameSettings.fases[faseAtual].pontosParaProximaFase;
+		float p = (float)pontos / (float)gameSettings.fases[faseAtual].pontos;
 
         faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
 
 		//Verifica se passou de fase
 		if(tempoRestante <= 0){
-			if(pontos >= gameSettings.fases[faseAtual].pontosParaProximaFase){
+			if(pontos >= gameSettings.fases[faseAtual].pontos){
 				faseAtual++;
 
 				bool faseFinal = faseAtual >= gameSettings.fases.Length;
