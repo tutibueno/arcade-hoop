@@ -70,6 +70,7 @@ Assets/StreamingAssets/*.avi
 Assets/StreamingAssets/*.mov
 Assets/StreamingAssets/*.mpeg
 Assets/StreamingAssets/*.webm
+Assets/StreamingAssets/*.meta
 
 # Caso você tenha outros arquivos que deseja versionar (ex: JSON, XML)
 # eles continuarão sendo versionados normalmente.
