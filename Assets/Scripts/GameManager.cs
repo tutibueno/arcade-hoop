@@ -16,6 +16,11 @@ public class GameManager : MonoBehaviour {
 		final
 	}
 
+	public enum EstadoRampa{
+		Levantada,
+		Baixada
+	}
+
 	[SerializeField]
 	GameSettings gameSettings;
 
@@ -120,6 +125,9 @@ public class GameManager : MonoBehaviour {
 
 	bool isHighscore;
 
+	private EstadoRampa estadoRampa;
+	public EstadoRampa GetEstadoRampa{ get { return estadoRampa; } }
+
 	Color tempoOriginalColor;
 
 	//Singleton
@@ -195,7 +203,7 @@ public class GameManager : MonoBehaviour {
 		//Subscreve ao evento
 		transicaoFase.OnTransicaoFaseFinished += OnTransicaoFaseFinished;
 
-	}    
+	}
 	
 	// Update is called once per frame
 	void Update () {
@@ -220,10 +228,12 @@ public class GameManager : MonoBehaviour {
 
 		GetInputs();
 
+		UpdateEstadoRampa ();
+
         videoCanvasGroup.alpha = videoPlayer.isPlaying ? 1 : 0;
 
 	}
-
+		
 	void GetInputs()
 	{
 		if (Input.GetKeyDown (KeyCode.Alpha5)) {
@@ -260,8 +270,8 @@ public class GameManager : MonoBehaviour {
 			creditos = 99;
 	}
 
-	public void RemoveCreditos(){
-		creditos--;
+	public void RemoveCreditos(int quantidade){
+		creditos-=quantidade;
 		if (creditos < 0)
 			creditos = 0;
 	}
@@ -360,7 +370,7 @@ public class GameManager : MonoBehaviour {
 	{
 		//verifica se não existe um jogo em andamento
 		if(stateAtual == gameState.attract && creditos > 0){
-			RemoveCreditos();
+			RemoveCreditos(1);
 			ResetGame();
 			ChangeState(gameState.countdown);
 			attractCanvas.alpha = 0;
@@ -369,11 +379,11 @@ public class GameManager : MonoBehaviour {
 			StartCoroutine(StartGameCo());
 		}
 	}
-
+	bool jaSolicitado;
 	void UpdateInGame()
 	{
 
-		inGameCanvas.alpha = Mathf.Lerp(inGameCanvas.alpha,1,Time.deltaTime*1.4f);
+		inGameCanvas.alpha = Mathf.Lerp(inGameCanvas.alpha,1,Time.deltaTime*2f);
 
         // Contagem regressiva
         if (tempoRestante > 0)
@@ -384,12 +394,24 @@ public class GameManager : MonoBehaviour {
 			}
         }
 
+		//Solicitar que a rampa levante quando estiver terminando o tempo
+		if (tempoRestante <= gameSettings.tempoSolicitarLevantarBaixarRampaNoCountDown) {
+			if (!jaSolicitado) {
+				if(estadoRampa == EstadoRampa.Baixada)
+					SolicitarComandoRampa (EstadoRampa.Levantada);
+				jaSolicitado = true;
+			}
+		}
+			
 		float p = (float)pontos / (float)gameSettings.fases[faseAtual].pontos;
 
         faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
 
 		//Verifica se passou de fase
 		if(tempoRestante <= 0){
+			
+			jaSolicitado = false;
+
 			if(pontos >= gameSettings.fases[faseAtual].pontos){
 				faseAtual++;
 
@@ -490,13 +512,16 @@ public class GameManager : MonoBehaviour {
 
         //TODO implementar a rotina de aguardar o motor da rampa
 
-
-
         //CountDown
         for (int i = gameSettings.countdownParaComecar; i >= 0; i--)
         {
 
-            countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
+			//Solicitar que a rampa baixe
+			if (i == GameSettings.tempoSolicitarLevantarBaixarRampaNoCountDown) {
+				GameManager.instance.SolicitarComandoRampa (GameManager.EstadoRampa.Baixada);
+			}
+
+			countDownTxt.text = i > 0 ? i.ToString() : gameSettings.mensagemCountDown;
 
             countDownRect.localScale = Vector3.zero;
 
@@ -578,4 +603,21 @@ public class GameManager : MonoBehaviour {
 		int rdn = Random.Range(0, videoFilesFinal.Length);
 		return videoFilesFinal[rdn];
 	}
+
+	void UpdateEstadoRampa(){
+		estadoRampa = Input.GetKey (KeyCode.R)  ? EstadoRampa.Levantada : EstadoRampa.Baixada;
+	}
+
+	public void SolicitarComandoRampa(EstadoRampa estadoDesejado){
+
+		//TODO Implementar
+
+
+		if (estadoDesejado == estadoRampa)
+			return;
+
+		Debug.Log ("Movimento da Rampa Solicitado: " + estadoDesejado);
+		DebugMsg.Instance.Log ("Movimento da Rampa Solicitado: " + estadoDesejado);
+	}
+
 }

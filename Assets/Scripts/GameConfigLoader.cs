@@ -69,6 +69,9 @@ public static class GameConfigLoader
                     case "tempoHabilitarBonus":
                         settings.tempoHabilitarBonus = int.Parse(value);
                         break;
+					case "mensagemCountDown":
+						settings.mensagemCountDown = value;
+						break;
                 }
             }
 

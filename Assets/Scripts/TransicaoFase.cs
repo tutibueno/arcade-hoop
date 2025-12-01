@@ -130,7 +130,12 @@ public class TransicaoFase : MonoBehaviour {
             //CountDown
             for (int i = countDown; i >= 0; i--)
             {
-                countDownTxt.text = i > 0 ? i.ToString() : "Vai!";
+				//Solicitar que a rampa baixe
+				if (i == GameManager.instance.GameSettings.tempoSolicitarLevantarBaixarRampaNoCountDown) {
+					GameManager.instance.SolicitarComandoRampa (GameManager.EstadoRampa.Baixada);
+				}
+
+				countDownTxt.text = i > 0 ? i.ToString() : GameManager.instance.GameSettings.mensagemCountDown;
 
                 countDownRect.localScale = Vector3.zero;
 
