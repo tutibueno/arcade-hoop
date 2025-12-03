@@ -99,14 +99,14 @@ public class TransicaoFase : MonoBehaviour {
 
         //Habilita as mensagens
 		if(faseFinal) {
-            linhasMensagens[0].text = "Parabéns!";
-            linhasMensagens[1].text = "Chegou ao Fim do Jogo!";
-            linhasMensagens[2].text = "Até a Próxima Partida!";
+			linhasMensagens[0].text = "Parabéns!".ToUpper();
+			linhasMensagens[1].text = "Chegou ao Fim do Jogo!".ToUpper();
+			linhasMensagens[2].text = "Até a Próxima Partida!".ToUpper();
 		}
 		else {
-            linhasMensagens[0].text = "Parabéns!";
-            linhasMensagens[1].text = "Prepare-se";
-            linhasMensagens[2].text = "Para a Próxima Fase!";
+			linhasMensagens[0].text = "Parabéns!".ToUpper();
+			linhasMensagens[1].text = "Prepare-se".ToUpper();
+			linhasMensagens[2].text = "Para a Próxima Fase!".ToUpper();
 		}
 
 		foreach (var item in canvasTransicaoMensagens)
@@ -150,8 +150,6 @@ public class TransicaoFase : MonoBehaviour {
             }
 
 		}
-
-		
 
         countDownRect.localScale = Vector3.zero;
 		

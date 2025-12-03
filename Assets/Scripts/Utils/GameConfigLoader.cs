@@ -18,6 +18,33 @@ public static class GameConfigLoader
         return ParseIni(File.ReadAllLines(filePath));
     }
 
+	private static KeyCode ParseKeyCode(string keyString)
+	{
+		// Remove espaços e capitaliza
+		keyString = keyString.Trim();
+
+		int i;
+
+		if (int.TryParse (keyString, out i))
+			keyString = "Alpha" + i;
+
+		KeyCode convertedKeyCode;
+
+		// Convert the string to a KeyCode
+		try
+		{
+			convertedKeyCode = (KeyCode)Enum.Parse(typeof(KeyCode), keyString, true);
+			Debug.Log("Convertida " + keyString + " para o KeyCode: " + convertedKeyCode);
+		}
+		catch (ArgumentException e)
+		{
+			convertedKeyCode = KeyCode.None;
+			Debug.LogError("Não foi possível converter a entrada " + keyString + " para um KeyCode. Erro: " + e.Message);
+		}
+			
+		return convertedKeyCode;
+	}
+
     private static GameSettings ParseIni(string[] lines)
     {
         GameSettings settings = new GameSettings();
@@ -72,8 +99,32 @@ public static class GameConfigLoader
 					case "mensagemCountDown":
 						settings.mensagemCountDown = value;
 						break;
+					case "tempoSolicitarLevantarBaixarRampaNoCountDown":
+						settings.tempoSolicitarLevantarBaixarRampaNoCountDown = int.Parse(value);
+						break;
                 }
+
+
             }
+			else if (currentSection == "Controles")
+			{
+				if (key == "teclaAcertarCesta")
+					settings.teclaAcertarCesta = ParseKeyCode(value);
+
+				else if (key == "teclaAdicionarCredito")
+					settings.teclaAdicionarCredito = ParseKeyCode(value);
+
+				else if (key == "teclaStartGame")
+					settings.teclaStartGame = ParseKeyCode(value);
+
+				else if (key == "teclaRampa")
+					settings.teclaRampa = ParseKeyCode(value);
+				else if (key == "ligaCapsLock")
+					settings.ligaCapsLock = bool.Parse(value);
+				else if (key == "ligaNumLock")
+					settings.ligaNumLock = bool.Parse (value);
+			}
+
 
             // Seções de fase --------------------------
             else if (currentSection.StartsWith("Fase") && faseAtual != null)

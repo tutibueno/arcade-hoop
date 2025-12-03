@@ -11,6 +11,12 @@ public class GameSettings{
 	public int tempoHabilitarBonus;
 	public string mensagemCountDown = "Vai!"; //3, 2, 1, Vai!
 	public int tempoSolicitarLevantarBaixarRampaNoCountDown = 2;
+	public KeyCode teclaAcertarCesta = KeyCode.Alpha2;
+	public KeyCode teclaAdicionarCredito = KeyCode.Alpha5;
+	public KeyCode teclaStartGame = KeyCode.Alpha1;
+	public KeyCode teclaRampa = KeyCode.R;
+	public bool ligaNumLock = true;
+	public bool ligaCapsLock = true;
 	public Fase[] fases;
 }
 

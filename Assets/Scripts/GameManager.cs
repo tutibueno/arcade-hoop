@@ -139,6 +139,8 @@ public class GameManager : MonoBehaviour {
 		return _instance;
 	}}
 
+	Coroutine movimentaRampaCo;
+
 	void Awake() {
         if (_instance == null)
         {
@@ -236,19 +238,15 @@ public class GameManager : MonoBehaviour {
 		
 	void GetInputs()
 	{
-		if (Input.GetKeyDown (KeyCode.Alpha5)) {
+		if (Input.GetKeyDown (GameSettings.teclaAdicionarCredito)) {
 			AddCreditos();
 		}
 
-		if (Input.GetKeyDown (KeyCode.Alpha2)) {
+		if (Input.GetKeyDown (GameSettings.teclaAcertarCesta)) {
 			AddPontos();
 		}
 
-		if (Input.GetKeyDown (KeyCode.Alpha3)) {
-			ResetGame();
-		}
-
-		if (Input.GetKeyDown (KeyCode.Alpha1)) {
+		if (Input.GetKeyDown (GameSettings.teclaStartGame)) {
 			StartGame();
 		}
 
@@ -329,7 +327,7 @@ public class GameManager : MonoBehaviour {
 
 		proximaFasePtsTxt.text = (Mathf.Clamp(gameSettings.fases[faseAtual].pontos - pontos, 0, Mathf.Infinity)).ToString();
 
-        if (tempoRestante <= 6f)
+        if (tempoRestante <= 11f)
         {
             float scale = 1f + Mathf.PingPong(Time.time * 4f, 0.2f);
             timerText.transform.localScale = new Vector3(scale, scale, 1f);
@@ -405,7 +403,7 @@ public class GameManager : MonoBehaviour {
 			
 		float p = (float)pontos / (float)gameSettings.fases[faseAtual].pontos;
 
-        faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*2);
+        faseSlider.value = Mathf.Lerp(faseSlider.value, p, Time.deltaTime*5);
 
 		//Verifica se passou de fase
 		if(tempoRestante <= 0){
@@ -518,7 +516,7 @@ public class GameManager : MonoBehaviour {
 
 			//Solicitar que a rampa baixe
 			if (i == GameSettings.tempoSolicitarLevantarBaixarRampaNoCountDown) {
-				GameManager.instance.SolicitarComandoRampa (GameManager.EstadoRampa.Baixada);
+				SolicitarComandoRampa (GameManager.EstadoRampa.Baixada);
 			}
 
 			countDownTxt.text = i > 0 ? i.ToString() : gameSettings.mensagemCountDown;
@@ -605,19 +603,45 @@ public class GameManager : MonoBehaviour {
 	}
 
 	void UpdateEstadoRampa(){
-		estadoRampa = Input.GetKey (KeyCode.R)  ? EstadoRampa.Levantada : EstadoRampa.Baixada;
+		estadoRampa = Input.GetKey (GameSettings.teclaRampa)  ? EstadoRampa.Levantada : EstadoRampa.Baixada;
 	}
 
 	public void SolicitarComandoRampa(EstadoRampa estadoDesejado){
 
-		//TODO Implementar
-
-
-		if (estadoDesejado == estadoRampa)
-			return;
-
 		Debug.Log ("Movimento da Rampa Solicitado: " + estadoDesejado);
-		DebugMsg.Instance.Log ("Movimento da Rampa Solicitado: " + estadoDesejado);
+		DebugMsg.Log ("Movimento da Rampa Solicitado: " + estadoDesejado);
+
+		if(movimentaRampaCo != null)
+			StopCoroutine (movimentaRampaCo);
+
+		movimentaRampaCo = StartCoroutine ("MovimentaRampaCo", estadoDesejado);
+
+
+	}
+
+	void LigaDesligaMotor(bool liga){
+		if (GameSettings.ligaCapsLock)
+			KeyboardHelper.SetCapsLock (liga);
+		if (GameSettings.ligaNumLock)
+			KeyboardHelper.SetNumLock (liga);
+	}
+
+	IEnumerator MovimentaRampaCo(EstadoRampa estadoDesejado){
+
+		if (estadoDesejado == EstadoRampa.Baixada) {
+			while (estadoRampa == EstadoRampa.Levantada) {
+				LigaDesligaMotor (true);
+				yield return null;
+			}
+		} else {
+			while (estadoRampa == EstadoRampa.Baixada) {
+				LigaDesligaMotor (true);
+				yield return null;
+			}
+		}
+		LigaDesligaMotor (false);
+
+		yield return null;
 	}
 
 }
